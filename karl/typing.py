@@ -51,7 +51,7 @@ def matchestype(type : istype) -> istype:
 #            return inspect.mutate_annotations(decorator, stdtype)
 
 def isa(type : builtins.type) -> callable:
-    @sugar.name(type)
+    @sugar.named(type)
     def is_type(value : object) -> bool:
         return builtins.isinstance(value, type)
     return is_type
@@ -67,7 +67,7 @@ def isiterable(value : object) -> bool:
         return False
 
 def lenof(len : int) -> istype:
-    @sugar.name(len)
+    @sugar.named(len)
     def len_is_len(value : isany):
         try:
             return builtins.len(value) == len
@@ -77,7 +77,7 @@ def lenof(len : int) -> istype:
 
 def iterable_of_all(type : istype) -> bool:
     # this seems good to break out the parts of
-    @sugar.name(type)
+    @sugar.named(type)
     def iterable_of_type(values : isiterable) -> bool:
         try:
             istype = matchestype(type)
@@ -89,7 +89,7 @@ def iterable_of_all(type : istype) -> bool:
 def iterable_of(*types : iterable_of_all(istype)) -> bool:
     types = [matchestype(type) for type in types]
     total_count = len(types)
-    @sugar.name(types)
+    @sugar.named(types)
     def iterable_of_types(values : isiterable) -> bool:
         count = 0
         for value, type in zip(values, types):
@@ -101,7 +101,7 @@ def iterable_of(*types : iterable_of_all(istype)) -> bool:
 
 def dict_of_all(type : istype) -> bool:
     iterable_of_2tuple = iterable_of(all(isa(tuple), lenof(2)))
-    @sugar.name(type)
+    @sugar.named(type)
     def dict_of_type(dict : builtins.dict) -> bool:
         try:
             items = list(dict.items())
@@ -122,15 +122,13 @@ def passableto(callable : builtins.callable) -> callable:
     '''
     Returns a function that evalutes if its arguments match callable_'s annotations.
     '''
-    sig = inspect.signature(callable)
+    annotations = inspect.annotations(callable)
     fln = inspect.file_line_name(callable)
-    #ret = matchestype(sig.return_annotation) # matching the return type atm likely would mean not multiply-instantiating function specializations
+    #ret = matchestype(annotations['__return']) # matching the return type atm likely would mean not multiply-instantiating function specializations
 
-    if sig.return_annotation is sig.empty:
-        warnings.warn(fln + ' is missing a return annotation')
-    for param in sig.parameters.values():
-        if param.annotation is param.empty:
-            warnings.warn(f'The {param.name} parameter to {fln} is missing an annotation')
+    for name, value in annotations.items():
+        if value is inspect.annotations.empty:
+            warnings.warn(f'The {name} parameter to {fln} is missing its annotation.')
 
     def passable_to_callable(*params, __return : istype = None, **kwparams) -> bool:
         '''
@@ -142,19 +140,23 @@ def passableto(callable : builtins.callable) -> callable:
         #    matchestype(__return) != ret
         #):
         #    return False
+        try:
+            binding = inspect.bind(callable, *params, **kwparams)
+        except:
+            return False
         return builtins.all((
-            matchestype(sig.parameters[name].annotation)(value)
+            matchestype(annotations[name])(value)
             for name, value
-            in sig.bind(*params, **kwparams).arguments.items()
+            in binding.items()
         ))
     passable_to_callable.__name__ = 'passable_to_' + callable.__name__
-    passable_to_callable.signature = sig
+    passable_to_callable.annotations = annotations
     passable_to_callable.file_line_name = fln
 
     return passable_to_callable
 
 def callableas(*params, __return : istype = None, **kwparams) -> istype:
-    @sugar.name(params if __return is None else [*params, __return])
+    @sugar.named(params if __return is None else [*params, __return])
     def callable_as_params(callable : iscallable) -> bool:
         return passableto(callable)(*params, **kwparams, __return=__return)
     return callable_as_params
@@ -163,3 +165,4 @@ pred.ispred = callableas(isany, __return = isbool)
 
 if __name__ == '__main__':
     assert pred.ispred(pred.ispred)
+    print(pred.ispred.__name__, ' => ', pred.ispred(pred.ispred))

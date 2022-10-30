@@ -16,15 +16,21 @@ def file_line_name(object) -> str:
         name_ = ' ' + name_
     return file + ':' + str(line) + name_
 
+def bind(function, *params, **kwparams) -> dict:
+    sig = signature(function)
+    binding = sig.bind(*params, **kwparams)
+    return binding.arguments
+
 def annotations(function : callable) -> dict:
     sig = signature(function)
     return {
         **{
             param.name : param.annotation
-            for param in signature(function).parameters
+            for param in signature(function).parameters.values()
         },
         '__return' : sig.return_annotation
     }
+annotations.empty = Parameter.empty
 
 def mutate_annotations(function : callable, mutator : callable, generator : callable = None) -> None:
     if hasattr(function, '__annotations__'):

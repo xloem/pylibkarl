@@ -1,17 +1,19 @@
-def getname(obj : object, default='unk'):
-    return obj if type(obj) is str else getattr(obj, '__name__', default)
+def nameof(obj : object, joiner : str = '_') -> str:
+    if type(obj) is str:
+        return obj
+    elif hasattr(obj, '__name__'):
+        return obj.__name__
+    else: # assume it's an iterable of things with names
+        return joiner.join((nameof(element) for element in obj))
 
-def name(new_word : str, joiner='_'):
+def named(new_word : object, joiner : str = '_') -> str:
     '''
     Returns a decorator that updates a function's __name__ by replacing the
     last underscore-separated word with a string determined at runtime.  The new
     string may itself be an object with a __name__.  If the new string is not a
     string but is an iterable, it will be joined.
     '''
-    if hasattr(new_word, '__name__'):
-        new_word = new_word.__name__
-    elif type(new_word) is not str:
-        new_word = joiner.join((getattr(item, '__name__', item) for item in new_word))
+    new_word = nameof(new_word)
     def update(function):
         if hasattr(function, '__name__'):
             full_old_name = function.__name__
