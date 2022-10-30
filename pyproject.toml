@@ -1,0 +1,18 @@
+[build-system]
+requires = ['setuptools>=61.0']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'karl'
+version = '0.1.0'
+description = 'Practice for using a personal library.'
+readme = 'README.md'
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)',
+    'Operating System :: OS Independent',
+]
+
+[project.urls]
+'Homepage' = 'https://github.com/xloem/pylibkarl'
+'Bug Tracker' = 'https://github.com/xloem/pylibkarl/issues'
